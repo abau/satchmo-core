@@ -1,0 +1,19 @@
+Name:           satchmo-core
+Version:        0.0.1
+Cabal-version:  >= 1.9.2
+Build-type:     Simple
+
+Library
+    Ghc-options:        -W -fno-warn-incomplete-patterns
+    Build-Depends:        base >= 4.2 && < 5.0
+                        , containers == 0.5.*
+                        , array == 0.4.*
+                        , mtl == 2.1.*
+                        , minisat
+    Exposed-Modules:      Satchmo.Core
+                        , Satchmo.Core.Boolean
+                        , Satchmo.Core.Data
+                        , Satchmo.Core.Decode
+                        , Satchmo.Core.MonadSAT
+                        , Satchmo.Core.SAT.Minisat
+                        , Satchmo.Core.SAT.StdOut
