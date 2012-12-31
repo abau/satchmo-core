@@ -11,6 +11,7 @@ import           Satchmo.Core.MonadSAT (MonadSAT,fresh,emit)
 
 data Boolean = Boolean  { encode ::  Literal }
              | Constant { value  :: !Bool }
+             deriving (Show)
 
 isConstant :: Boolean -> Bool
 isConstant (Constant {}) = True
@@ -117,3 +118,14 @@ fun3 f x y z = do
         , pack (f a b c) r 
         ]
   return r
+
+-- |@select True b@ returns @b@, @select False b@ returns @not b@
+select :: Bool -> Boolean -> Boolean
+select True  b = b
+select False b = not b
+
+-- |@antiSelect True b@ returns @not b@, @antiSelect False b@ returns @b@
+select :: Bool -> Boolean -> Boolean
+select True  b = not b
+select False b = b
+
