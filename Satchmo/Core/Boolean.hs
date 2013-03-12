@@ -89,6 +89,16 @@ ifThenElseM conditionM ifTrue ifFalse = do
   c <- conditionM
   ifThenElse c ifTrue ifFalse
 
+-- |@select True b@ returns @b@, @select False b@ returns @not b@
+select :: Bool -> Boolean -> Boolean
+select True  b = b
+select False b = not b
+
+-- |@antiSelect True b@ returns @not b@, @antiSelect False b@ returns @b@
+antiSelect :: Bool -> Boolean -> Boolean
+antiSelect True  b = not b
+antiSelect False b = b
+
 -- | Implement a function by giving a full CNF that determines the outcome
 fun2 :: MonadSAT m => ( Bool -> Bool -> Bool ) -> Boolean -> Boolean -> m Boolean
 fun2 f x y = do
@@ -96,10 +106,9 @@ fun2 f x y = do
   sequence_ $ do
     a <- [ False, True ]
     b <- [ False, True ]
-    let pack flag var = if flag then var else not var
-    return $ assertOr [ pack a x
-                      , pack b y
-                      , pack (f a b) r ]
+    return $ assertOr [ select a x
+                      , select b y
+                      , select (f a b) r ]
   return r
 
 -- | Implement the function by giving a full CNF that determines the outcome
@@ -112,20 +121,11 @@ fun3 f x y z = do
     a <- [ False, True ]
     b <- [ False, True ]
     c <- [ False, True ]
-    let pack flag var = if flag then var else not var
     return $ assertOr
-        [ pack a x, pack b y, pack c z
-        , pack (f a b c) r 
+        [ select a x
+        , select b y
+        , select c z
+        , select (f a b c) r 
         ]
   return r
-
--- |@select True b@ returns @b@, @select False b@ returns @not b@
-select :: Bool -> Boolean -> Boolean
-select True  b = b
-select False b = not b
-
--- |@antiSelect True b@ returns @not b@, @antiSelect False b@ returns @b@
-select :: Bool -> Boolean -> Boolean
-select True  b = not b
-select False b = b
 

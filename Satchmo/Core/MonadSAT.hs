@@ -11,5 +11,5 @@ class Monad m => MonadSAT m where
   -- |Emits a clause
   emit  :: Clause -> m ()
 
-  -- | Emits some note (could be printed by the backend)
+  -- |Emits some note (could be printed by the backend)
   note  :: String -> m ()
