@@ -5,6 +5,7 @@ Build-type:     Simple
 
 Library
     Ghc-options:        -W -fno-warn-incomplete-patterns
+    Extensions:           TypeFamilies
     Build-Depends:        base >= 4.2 && < 5.0
                         , containers == 0.5.*
                         , array == 0.4.*
@@ -14,6 +15,8 @@ Library
                         , Satchmo.Core.Boolean
                         , Satchmo.Core.Data
                         , Satchmo.Core.Decode
+                        , Satchmo.Core.Formula
                         , Satchmo.Core.MonadSAT
+                        , Satchmo.Core.Primitive
                         , Satchmo.Core.SAT.Minisat
                         , Satchmo.Core.SAT.StdOut

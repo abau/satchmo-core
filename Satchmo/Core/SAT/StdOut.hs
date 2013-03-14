@@ -1,11 +1,12 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
+-- |@MonadSAT@ instance that prints the generated formula instead of solving it
 module Satchmo.Core.SAT.StdOut
-  (SAT,onStdOut)
+  (SAT, onStdOut, module Satchmo.Core.MonadSAT)
 where
 
 import Control.Monad.State
 import Data.Word (Word)
-import Satchmo.Core.MonadSAT (MonadSAT (..))
+import Satchmo.Core.MonadSAT 
 import Satchmo.Core.Data (Literal (..),Clause (..),literal)
 
 data SATState = SATState { nextVariable :: Word
@@ -30,6 +31,7 @@ instance MonadSAT SAT where
 
   note = liftIO . putStrLn
 
+-- |Prints reversed DIMACS formula on stdout
 onStdOut :: SAT a -> IO a
 onStdOut sat = do 
   (result,state) <- runStateT (runSAT sat) (SATState 0 0)

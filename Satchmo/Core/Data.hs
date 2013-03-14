@@ -1,5 +1,5 @@
 module Satchmo.Core.Data
-  ( Literal, variable, isPositive, literal, not
+  ( Variable, Literal, variable, isPositive, literal, not
   , Clause, clause, literals
   , CNF, cnf, clauses, numClauses, numVariables, toDimacs
   )

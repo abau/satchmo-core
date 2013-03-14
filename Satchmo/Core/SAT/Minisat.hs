@@ -1,19 +1,21 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+-- |Binding to Minisat solver
 module Satchmo.Core.SAT.Minisat
-  (SAT, solve, solveWithTimeout)
+  (SAT, solve, solveWithTimeout, module Satchmo.Core.MonadSAT)
 where
 
-import           Control.Monad (void)
+import           Control.Monad (void,when)
 import           System.IO (stderr,hPutStrLn)
 import           Control.Concurrent.MVar (newEmptyMVar,putMVar,takeMVar)
 import           Control.Concurrent (killThread,forkIO,threadDelay)
 import           Control.Exception (AsyncException,catch)
-import           Satchmo.Core.MonadSAT (MonadSAT (..))
+import           Satchmo.Core.MonadSAT 
 import qualified MiniSat as API
 import           Satchmo.Core.Data (Literal (..),Clause (..),literal)
 import           Satchmo.Core.Decode (Decode (..))
 import           Satchmo.Core.Boolean (Boolean (..))
+import           Satchmo.Core.Formula (Formula, decodeFormula)
 
 newtype SAT a = SAT (API.Solver -> IO a)
 
@@ -49,10 +51,17 @@ instance Decode SAT Boolean Bool where
             value <- valueOf $ variable literal
             return $ if isPositive literal then value else not value
 
-solveWithTimeout :: Maybe Int -> SAT (SAT a) -> IO (Maybe a)
-solveWithTimeout mto action = do
+instance Decode SAT Formula Bool where
+  decode = decodeFormula
+
+
+solveWithTimeout :: Bool            -- ^Be verbosely
+                 -> Maybe Int       -- ^Timeout in seconds
+                 -> SAT (SAT a)     -- ^Action in the 'SAT' monad
+                 -> IO (Maybe a)    -- ^'Maybe' a result
+solveWithTimeout verbose mto action = do
     accu <- newEmptyMVar 
-    worker <- forkIO $ solve action >>= putMVar accu
+    worker <- forkIO $ solve verbose action >>= putMVar accu
     timer <- forkIO $ case mto of
         Just to -> do 
               threadDelay ( 10^6 * to ) 
@@ -65,20 +74,25 @@ solveWithTimeout mto action = do
         killThread timer
         return Nothing
 
-solve :: SAT (SAT a) -> IO (Maybe a)
-solve ( SAT m ) = API.withNewSolver $ \ s -> do
-  hPutStrLn stderr $ "start producing CNF"
+solve :: Bool           -- ^Be verbosely
+      -> SAT (SAT a)    -- ^Action in the 'SAT' monad
+      -> IO (Maybe a)   -- ^'Maybe' a result
+solve verbose ( SAT m ) = API.withNewSolver $ \ s -> do
+  when verbose $ hPutStrLn stderr $ "Start producing CNF"
   SAT decoder <- m s
   v <- API.minisat_num_vars s
   c <- API.minisat_num_clauses s
-  hPutStrLn stderr $ unwords [ "CNF finished", "vars", show v, "clauses", show c ]
-  hPutStrLn stderr $ "starting solver"
+  when verbose $ hPutStrLn stderr 
+               $ concat [ "CNF finished (" , "#variables: ", show v
+                                           , ", #clauses: "  , show c 
+                                           , ")"]
+  when verbose $ hPutStrLn stderr $ "Starting solver"
   b <- API.solve s []
-  hPutStrLn stderr $ "solver finished, result: " ++ show b
+  when verbose $ hPutStrLn stderr $ "Solver finished (result: " ++ show b ++ ")"
   if b 
     then do
-      hPutStrLn stderr $ "starting decoder"    
+      when verbose $ hPutStrLn stderr $ "Starting decoder"    
       out <- decoder s
-      hPutStrLn stderr $ "decoder finished"    
+      when verbose $ hPutStrLn stderr $ "Decoder finished"    
       return $ Just out
     else return Nothing
