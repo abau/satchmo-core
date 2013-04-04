@@ -13,7 +13,7 @@ import qualified Data.Set as S
 type Variable = Word
 data Literal  = Literal { variable   :: Variable
                         , isPositive :: Bool
-                        } deriving (Show)
+                        } deriving (Eq,Ord,Show)
 
 literal :: Bool -> Variable -> Literal
 literal pos var = Literal var pos

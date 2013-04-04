@@ -13,6 +13,7 @@ import           Satchmo.Core.Primitive
 
 data Boolean = Boolean  { encode ::  Literal }
              | Constant { value  :: !Bool }
+             deriving (Eq,Ord)
 
 instance Show Boolean where
   show (Boolean b) | D.isPositive b = show $ D.variable b
