@@ -20,6 +20,7 @@ data Formula = Atom     Boolean
              | Implies  Formula Formula
              | Xor     [Formula]
              | Equiv   [Formula]
+             deriving (Eq,Ord)
 
 instance Primitive Formula where
   constant    = Atom . constant
