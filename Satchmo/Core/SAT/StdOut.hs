@@ -31,6 +31,9 @@ instance MonadSAT SAT where
 
   note = liftIO . putStrLn
 
+  numVariables = liftM fromIntegral $ gets nextVariable
+  numClauses   = liftM fromIntegral $ gets nextClause
+
 -- |Prints reversed DIMACS formula on stdout
 onStdOut :: SAT a -> IO a
 onStdOut sat = do 

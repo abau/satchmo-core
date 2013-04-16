@@ -42,6 +42,9 @@ instance MonadSAT SAT where
 
   note msg = SAT $ const $ putStrLn msg
 
+  numVariables = SAT API.minisat_num_vars
+  numClauses   = SAT API.minisat_num_clauses
+
 instance Decode SAT Boolean Bool where
     decode b = case b of
         Constant c -> return c
