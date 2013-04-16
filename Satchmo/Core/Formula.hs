@@ -24,6 +24,16 @@ data Formula = Atom     Boolean
 
 instance Primitive Formula where
   constant    = Atom . constant
+
+  isConstant formula = case formula of
+    Atom a      -> isConstant a
+    Not  f      -> isConstant f
+    And  fs     -> all isConstant fs
+    Or   fs     -> all isConstant fs
+    Implies a b -> all isConstant [a,b]
+    Xor fs      -> all isConstant fs
+    Equiv   fs  -> all isConstant fs
+
   primitive   = primitive >>= return . Atom  
   assert xs   = mapM toBoolean xs >>= assert
 

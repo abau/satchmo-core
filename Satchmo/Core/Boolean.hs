@@ -1,5 +1,5 @@
 module Satchmo.Core.Boolean
-  (Boolean (..), isConstant, boolean, module Satchmo.Core.Primitive)
+  (Boolean (..), boolean, module Satchmo.Core.Primitive)
 where
 
 import           Prelude hiding (not,and)
@@ -20,13 +20,12 @@ instance Show Boolean where
   show (Boolean b)                  = "!" ++ (show $ D.variable b)
   show (Constant b)                 = show b
 
-isConstant :: Boolean -> Bool
-isConstant (Constant {}) = True
-isConstant _             = False
-
 instance Primitive Boolean where
 
   constant = Constant
+
+  isConstant (Constant {}) = True
+  isConstant _             = False
 
   primitive = fresh >>= return . Boolean 
 

@@ -11,6 +11,9 @@ class Primitive p where
   -- |Encodes a boolean value
   constant :: Bool -> p
 
+  -- |Checks whether a primitive is constant
+  isConstant :: p -> Bool
+
   -- |Makes a primitive whose value is unknown
   primitive :: MonadSAT m => m p
 
