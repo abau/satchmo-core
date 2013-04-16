@@ -7,6 +7,7 @@ module Satchmo.Core.SAT.Minisat
 where
 
 import           Control.Monad (void,when)
+import           Control.Monad.IO.Class (MonadIO (..))
 import           System.IO (stderr,hPutStrLn)
 import           Control.Concurrent.MVar (newEmptyMVar,putMVar,takeMVar)
 import           Control.Concurrent (killThread,forkIO,threadDelay)
@@ -26,6 +27,9 @@ instance Functor SAT where
 instance Monad SAT where
   return x    = SAT $ const $ return x
   SAT m >>= f = SAT $ \ s -> do x <- m s ; let { SAT n = f x } ; n s
+
+instance MonadIO SAT where
+  liftIO = SAT . const 
 
 instance MonadSAT SAT where
   fresh = SAT $ \ s -> do 

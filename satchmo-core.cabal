@@ -1,5 +1,5 @@
 Name:           satchmo-core
-Version:        0.3.0
+Version:        0.4.0
 Cabal-version:  >= 1.9.2
 Build-type:     Simple
 
@@ -10,6 +10,7 @@ Library
                         , containers == 0.5.*
                         , array == 0.4.*
                         , mtl == 2.1.*
+                        , transformers == 0.3.*
                         , minisat
     Exposed-Modules:      Satchmo.Core
                         , Satchmo.Core.Boolean
