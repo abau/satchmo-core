@@ -9,6 +9,7 @@ where
 import           Control.Monad (void,when)
 import           Control.Monad.IO.Class (MonadIO (..))
 import           System.IO (stderr,hPutStrLn)
+import           System.CPUTime (getCPUTime)
 import           Control.Concurrent.MVar (newEmptyMVar,putMVar,takeMVar)
 import           Control.Concurrent (killThread,forkIO,threadDelay)
 import           Control.Exception (AsyncException,catch)
@@ -102,8 +103,16 @@ solve' verbose ( SAT m ) = API.withNewSolver $ \ s -> do
                                                , ", #clauses: "  , show c 
                                                , ")"]
       when verbose $ hPutStrLn stderr $ "Starting solver"
-      b <- API.solve s []
-      when verbose $ hPutStrLn stderr $ "Solver finished (result: " ++ show b ++ ")"
+      startTime <- getCPUTime
+      b         <- API.solve s []
+      endTime   <- getCPUTime
+
+      let diffTime = ( (fromIntegral (endTime - startTime)) / (10^12) ) :: Double
+
+      when verbose $ hPutStrLn stderr $ concat 
+        [ "Solver finished in "
+        , show diffTime, " seconds (result: " ++ show b ++ ")"
+        ]
       if b 
         then do
           when verbose $ hPutStrLn stderr $ "Starting decoder"    
