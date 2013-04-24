@@ -24,8 +24,8 @@ instance Primitive Boolean where
 
   constant = Constant
 
-  isConstant (Constant {}) = True
-  isConstant _             = False
+  evaluateConstant (Boolean _)  = Nothing
+  evaluateConstant (Constant b) = Just b
 
   primitive = fresh >>= return . Boolean 
 

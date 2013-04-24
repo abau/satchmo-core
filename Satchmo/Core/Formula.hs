@@ -7,6 +7,7 @@ where
 import           Prelude hiding (not,and,or)
 import qualified Prelude as P
 import           Data.List (intercalate)
+import           Data.Maybe (fromJust)
 import           Satchmo.Core.Boolean (Boolean (..))
 import           Satchmo.Core.MonadSAT (MonadSAT)
 import           Satchmo.Core.Primitive 
@@ -23,16 +24,32 @@ data Formula = Atom     Boolean
              deriving (Eq,Ord)
 
 instance Primitive Formula where
-  constant    = Atom . constant
+  constant = Atom . constant
 
-  isConstant formula = case formula of
-    Atom a      -> isConstant a
-    Not  f      -> isConstant f
-    And  fs     -> all isConstant fs
-    Or   fs     -> all isConstant fs
-    Implies a b -> all isConstant [a,b]
-    Xor fs      -> all isConstant fs
-    Equiv   fs  -> all isConstant fs
+  evaluateConstant formula = case formula of
+    Atom a   -> evaluateConstant a
+
+    Not f    -> fmap P.not $ evaluateConstant f
+
+    And fs   -> if all isConstant fs
+                then Just $ all (fromJust . evaluateConstant) fs
+                else Nothing
+
+    Or fs    -> if all isConstant fs
+                then Just $ any (fromJust . evaluateConstant) fs
+                else Nothing
+
+    Implies   a b -> do a' <- evaluateConstant a
+                        b' <- evaluateConstant b
+                        return ( (P.not a') || b' )
+    
+    Xor fs   -> if all isConstant fs
+                then Just $ foldl1 xor2 $ map (fromJust . evaluateConstant) fs
+                else Nothing
+
+    Equiv fs -> if all isConstant fs
+                then Just $ foldl1 (==) $ map (fromJust . evaluateConstant) fs
+                else Nothing
 
   primitive   = primitive >>= return . Atom  
   assert xs   = mapM toBoolean xs >>= assert
@@ -73,8 +90,10 @@ decodeFormula formula = case formula of
   Implies a b -> mapM decodeFormula [a,b] >>= \[a',b'] -> return $ (P.not a') || b'
   Xor fs      -> mapM decodeFormula fs    >>= \(x:xs)  -> return $ foldl xor2 x xs
   Equiv fs    -> mapM decodeFormula fs    >>= \(x:xs)  -> return $ all (x ==) xs
-  where
-    xor2 a b = P.not (a == b)
+
+
+xor2 :: Bool -> Bool -> Bool
+xor2 a b = P.not $ a == b
 
 -- |Renders a formula to ASCII
 renderAscii :: Formula -> String

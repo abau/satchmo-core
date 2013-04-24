@@ -11,8 +11,8 @@ class Primitive p where
   -- |Encodes a boolean value
   constant :: Bool -> p
 
-  -- |Checks whether a primitive is constant
-  isConstant :: p -> Bool
+  -- |@evaluateConstant p@ evaluates the value of @p@ if @p@ is constant
+  evaluateConstant :: p -> Maybe Bool
 
   -- |Makes a primitive whose value is unknown
   primitive :: MonadSAT m => m p
@@ -49,6 +49,12 @@ class Primitive p where
   -- |Encodes equality
   equals :: MonadSAT m => [p] -> m p
   equals xs = return not `ap` xor xs
+
+-- |Checks whether a primitive is constant
+isConstant :: (Primitive p) => p -> Bool
+isConstant p = case evaluateConstant p of
+  Nothing -> False
+  Just _  -> True
 
 -- |@assertOr = assert@
 assertOr :: (MonadSAT m, Primitive p) => [p] -> m ()
