@@ -6,8 +6,8 @@ import Control.Monad (ap,foldM)
 import Satchmo.Core.MonadSAT (MonadSAT (..))
 
 -- |Class of primitives to build boolean formulas.
--- Minimal definition is @constant, primitive, assert, not, and@.
-class Primitive p where
+-- Minimal definition is @constant, evaluateConstant, primitive, assert, not, and@.
+class Show p => Primitive p where
   -- |Encodes a boolean value
   constant :: Bool -> p
 
