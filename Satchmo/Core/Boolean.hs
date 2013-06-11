@@ -5,7 +5,7 @@ where
 import           Prelude hiding (not,and)
 import qualified Prelude as P
 import           Control.Monad (when)
-import           Data.List (partition)
+import           Data.List (nub,partition)
 import           Satchmo.Core.Data (Literal,clause)
 import qualified Satchmo.Core.Data as D
 import           Satchmo.Core.MonadSAT (MonadSAT,fresh,emit)
@@ -39,14 +39,19 @@ instance Primitive Boolean where
     Boolean literal   -> Boolean  $ D.not literal
     Constant constant -> Constant $ P.not constant
 
-  and booleans = case booleans of
+  and booleans = case nub booleans of
     []  -> return $ constant True
     [x] -> return x
-    xs  -> do y <- boolean                                  
-              sequence_ $ do x <- xs                        -- y -> xs
-                             return $ assertOr [not y, x]
-              assertOr $ y : map not xs                     -- y <- xs
-              return y
+    xs  -> 
+      let (constants,rest) = partition isConstant xs
+          constantValue    = P.and $ map value constants
+      in case constantValue of
+           False -> return $ constant False
+           True  -> do y <- boolean
+                       sequence_ $ do x <- rest                      -- y -> rest
+                                      return $ assertOr [not y, x]
+                       assertOr $ y : map not rest                   -- y <- rest
+                       return y
 
 -- |@boolean = primitive@ but with non-ambiguous type
 boolean :: MonadSAT m => m Boolean
