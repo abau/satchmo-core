@@ -42,9 +42,12 @@ class (Show p,Eq p) => Primitive p where
   xor (x:xs) = foldM xor2 x xs
     where
       xor2 x y = do
-        notBothFalse <- or [x,y]
-        notBothTrue  <- return not `ap` and [x,y]
-        and [ notBothFalse, notBothTrue ]
+        r <- primitive
+        assert [ not x,     y ,     r ]
+        assert [     x, not y ,     r ]
+        assert [     x,     y , not r ]
+        assert [ not x, not y , not r ]
+        return r
 
   -- |Encodes equality
   equals :: MonadSAT m => [p] -> m p
