@@ -39,7 +39,7 @@ class (Show p,Eq p) => Primitive p where
   -- |Encodes exclusive disjunction
   xor :: MonadSAT m => [p] -> m p
   xor []     = return $ constant False
-  xor (x:xs) = foldM xor2 x xs
+  xor xs = foldT return xor2 xor3 xs
     where
       xor2 x y = do
         r <- primitive
@@ -48,10 +48,43 @@ class (Show p,Eq p) => Primitive p where
         assert [     x,     y , not r ]
         assert [ not x, not y , not r ]
         return r
+      xor3 a b c = do
+        x <- primitive
+        let implies xs ys = assert $ map not xs ++ ys
+        implies [not a, not b, not c] [not x]
+        implies [not a, not b,     c] [    x]
+        implies [not a,     b, not c] [    x]
+        implies [not a,     b,     c] [not x]
+        implies [    a, not b, not c] [    x]
+        implies [    a, not b,     c] [not x]
+        implies [    a,     b, not c] [not x]
+        implies [    a,     b,     c] [    x]
+        return x
 
   -- |Encodes equality
   equals :: MonadSAT m => [p] -> m p
   equals xs = return not `ap` xor xs
+
+
+foldB :: Monad m => (a -> m b) -> (b -> b -> m b) -> [a] -> m b
+foldB u f xs = case xs of
+    [ ] -> error "Satchmo.Core.Primitive.foldB"
+    [x] -> u x
+    _   -> do 
+        let (pre,post) = splitAt (div (length xs) 2) xs
+        a <- foldB u f pre ; b <- foldB u f post
+        f a b
+
+foldT :: Monad m => (a -> m b) -> (a -> a -> m b) -> (b -> b -> b -> m b) -> [a] -> m b
+foldT u f g xs = case xs of
+    [ ] -> error "Satchmo.Core.Primitive.foldB"
+    [x] -> u x
+    [x,y] -> f x y
+    _   -> do 
+        let n = length xs ; t = div n 3
+            (pre,midpost) = splitAt t xs ; (mid,post) = splitAt t midpost
+        a <- foldT u f g pre ; b <- foldT u f g mid ; c <- foldT u f g post
+        g a b c
 
 -- |Checks whether a primitive is constant
 isConstant :: (Primitive p) => p -> Bool
@@ -69,9 +102,13 @@ assertAnd = mapM_ $ assertOr . return
 
 -- |Encodes a conditional expression
 ifThenElse :: (MonadSAT m, Primitive p) => p -> p -> p -> m p
-ifThenElse condition ifTrue ifFalse =
-  and =<< sequence [ condition     `implies` ifTrue
-                   , not condition `implies` ifFalse ]
+ifThenElse i t e = do
+  r <- primitive
+  assert [ not i, not t ,     r ]
+  assert [ not i,     t , not r ]
+  assert [     i, not e ,     r ]
+  assert [     i,     e , not r ]
+  return r
 
 -- |Monadic version of @ifThenElse@
 ifThenElseM :: (MonadSAT m, Primitive p) => m p -> m p -> m p -> m p
