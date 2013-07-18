@@ -45,7 +45,7 @@ instance MonadSAT SAT where
                        $ fromIntegral
                        $ variable l
 
-  note msg = SAT $ const $ putStrLn msg
+  note msg = SAT $ const $ hPutStrLn stderr msg
 
   numVariables = SAT API.minisat_num_vars
   numClauses   = SAT API.minisat_num_clauses
