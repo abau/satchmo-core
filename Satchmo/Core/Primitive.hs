@@ -2,7 +2,7 @@ module Satchmo.Core.Primitive
 where
 
 import Prelude hiding (not,and,or)
-import Control.Monad (ap,foldM)
+import Control.Monad (ap)
 import Satchmo.Core.MonadSAT (MonadSAT (..))
 
 -- |Class of primitives to build boolean formulas.
@@ -77,7 +77,7 @@ foldB u f xs = case xs of
 
 foldT :: Monad m => (a -> m b) -> (a -> a -> m b) -> (b -> b -> b -> m b) -> [a] -> m b
 foldT u f g xs = case xs of
-    [ ] -> error "Satchmo.Core.Primitive.foldB"
+    [ ] -> error "Satchmo.Core.Primitive.foldT"
     [x] -> u x
     [x,y] -> f x y
     _   -> do 
