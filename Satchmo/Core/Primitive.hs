@@ -1,9 +1,14 @@
 module Satchmo.Core.Primitive
+  ( Primitive (..)
+  , evaluateConstant, isConstant, assertOr, assertAnd, ifThenElse, ifThenElseM
+  , select, antiSelect, fun2, fun3
+  )
 where
 
 import Prelude hiding (not,and,or)
 import Control.Monad (ap)
 import Satchmo.Core.MonadSAT (MonadSAT (..))
+import Satchmo.Core.Data (Literal)
 
 -- |Class of primitives to build boolean formulas.
 -- Minimal definition is @constant, evaluateConstant, primitive, assert, not, and@.
@@ -11,8 +16,8 @@ class (Show p,Eq p) => Primitive p where
   -- |Encodes a boolean value
   constant :: Bool -> p
 
-  -- |@evaluateConstant p@ evaluates the value of @p@ if @p@ is constant
-  evaluateConstant :: p -> Maybe Bool
+  -- |Evaluates a primitive to either a literal or a constant
+  evaluate :: p -> Either Literal Bool
 
   -- |Makes a primitive whose value is unknown
   primitive :: MonadSAT m => m p
@@ -65,26 +70,11 @@ class (Show p,Eq p) => Primitive p where
   equals :: MonadSAT m => [p] -> m p
   equals xs = return not `ap` xor xs
 
-
-foldB :: Monad m => (a -> m b) -> (b -> b -> m b) -> [a] -> m b
-foldB u f xs = case xs of
-    [ ] -> error "Satchmo.Core.Primitive.foldB"
-    [x] -> u x
-    _   -> do 
-        let (pre,post) = splitAt (div (length xs) 2) xs
-        a <- foldB u f pre ; b <- foldB u f post
-        f a b
-
-foldT :: Monad m => (a -> m b) -> (a -> a -> m b) -> (b -> b -> b -> m b) -> [a] -> m b
-foldT u f g xs = case xs of
-    [ ] -> error "Satchmo.Core.Primitive.foldT"
-    [x] -> u x
-    [x,y] -> f x y
-    _   -> do 
-        let n = length xs ; t = div n 3
-            (pre,midpost) = splitAt t xs ; (mid,post) = splitAt t midpost
-        a <- foldT u f g pre ; b <- foldT u f g mid ; c <- foldT u f g post
-        g a b c
+-- |@evaluateConstant p@ evaluates the value of @p@ if @p@ is constant
+evaluateConstant :: (Primitive p) => p -> Maybe Bool
+evaluateConstant p = case evaluate p of
+  Right constant -> return constant
+  _              -> Nothing
 
 -- |Checks whether a primitive is constant
 isConstant :: (Primitive p) => p -> Bool
@@ -156,3 +146,25 @@ fun3 f x y z = do
         , select (f a b c) r 
         ]
   return r
+
+{-
+foldB :: Monad m => (a -> m b) -> (b -> b -> m b) -> [a] -> m b
+foldB u f xs = case xs of
+    [ ] -> error "Satchmo.Core.Primitive.foldB"
+    [x] -> u x
+    _   -> do 
+        let (pre,post) = splitAt (div (length xs) 2) xs
+        a <- foldB u f pre ; b <- foldB u f post
+        f a b
+        -}
+
+foldT :: Monad m => (a -> m b) -> (a -> a -> m b) -> (b -> b -> b -> m b) -> [a] -> m b
+foldT u f g xs = case xs of
+    [ ] -> error "Satchmo.Core.Primitive.foldT"
+    [x] -> u x
+    [x,y] -> f x y
+    _   -> do 
+        let n = length xs ; t = div n 3
+            (pre,midpost) = splitAt t xs ; (mid,post) = splitAt t midpost
+        a <- foldT u f g pre ; b <- foldT u f g mid ; c <- foldT u f g post
+        g a b c

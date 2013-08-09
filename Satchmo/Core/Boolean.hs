@@ -24,8 +24,8 @@ instance Primitive Boolean where
 
   constant = Constant
 
-  evaluateConstant (Boolean _)  = Nothing
-  evaluateConstant (Constant b) = Just b
+  evaluate (Boolean  l) = Left  l
+  evaluate (Constant b) = Right b
 
   primitive = fresh >>= return . Boolean 
 

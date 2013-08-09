@@ -26,30 +26,30 @@ data Formula = Atom     Boolean
 instance Primitive Formula where
   constant = Atom . constant
 
-  evaluateConstant formula = case formula of
-    Atom a   -> evaluateConstant a
+  evaluate formula = case formula of
+    Atom a   -> evaluate a
 
-    Not f    -> fmap P.not $ evaluateConstant f
+    Not f    -> fmap P.not $ evaluate f
 
     And fs   -> if all isConstant fs
-                then Just $ all (fromJust . evaluateConstant) fs
-                else Nothing
+                then Right $ all (fromJust . evaluateConstant) fs
+                else error "Satchmo.Core.Formula.evaluate: And"
 
     Or fs    -> if all isConstant fs
-                then Just $ any (fromJust . evaluateConstant) fs
-                else Nothing
+                then Right $ any (fromJust . evaluateConstant) fs
+                else error "Satchmo.Core.Formula.evaluate: Or"
 
-    Implies   a b -> do a' <- evaluateConstant a
-                        b' <- evaluateConstant b
+    Implies   a b -> do a' <- evaluate a
+                        b' <- evaluate b
                         return ( (P.not a') || b' )
     
     Xor fs   -> if all isConstant fs
-                then Just $ foldl1 xor2 $ map (fromJust . evaluateConstant) fs
-                else Nothing
+                then Right $ foldl1 xor2 $ map (fromJust . evaluateConstant) fs
+                else error "Satchmo.Core.Formula.evaluate: Xor"
 
     Equiv fs -> if all isConstant fs
-                then Just $ foldl1 (==) $ map (fromJust . evaluateConstant) fs
-                else Nothing
+                then Right $ foldl1 (==) $ map (fromJust . evaluateConstant) fs
+                else error "Satchmo.Core.Formula.evaluate: Equiv"
 
   primitive   = primitive >>= return . Atom  
   assert xs   = mapM toBoolean xs >>= assert
