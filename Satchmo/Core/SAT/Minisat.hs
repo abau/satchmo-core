@@ -10,6 +10,7 @@ where
 import           Control.Monad.State
 import           System.IO (stderr,hPutStrLn)
 import           System.CPUTime (getCPUTime)
+import qualified Data.Map.Strict as M
 import           Control.Concurrent.MVar (newEmptyMVar,putMVar,takeMVar)
 import           Control.Concurrent (killThread,forkIO,threadDelay)
 import           Control.Exception (AsyncException,catch)
@@ -20,7 +21,8 @@ import           Satchmo.Core.Decode (Decode (..))
 import           Satchmo.Core.Boolean (Boolean (..))
 import           Satchmo.Core.Formula (Formula, decodeFormula)
 
-data SATState = SATState { solver   :: API.Solver
+data SATState = SATState { solver          :: ! API.Solver
+                         , clauseHistogram :: ! (M.Map Int Int)
                          }
 
 newtype SAT a = SAT { runSAT :: StateT SATState IO a }
@@ -33,6 +35,8 @@ instance MonadSAT SAT where
     return $ literal True $ fromIntegral x
 
   emit clause = do
+    modify $! \state -> state { clauseHistogram = 
+      M.insertWith (+) (length $ literals clause) 1 $ clauseHistogram state }
     s <- gets solver
     void $ liftIO $ API.addClause s apiClause
     where
@@ -90,35 +94,42 @@ solve' :: Bool                -- ^Be verbosely
        -> SAT (Maybe (SAT a)) -- ^Action in the 'SAT' monad
        -> IO (Maybe a)        -- ^'Maybe' a result
 solve' verbose action = API.withNewSolver $ \ solver -> 
-  let state = SATState solver 
+  let state = SATState solver M.empty
   in do
     when verbose $ hPutStrLn stderr $ "Start producing CNF"
-    evalStateT (runSAT action) state >>= \case 
+    runStateT (runSAT action) state >>= \(result,state') -> case result of
       Nothing -> do
         when verbose $ hPutStrLn stderr "Abort due to known result"
         return Nothing
       Just decoder -> do
         numVars    <- API.minisat_num_vars    solver
         numClauses <- API.minisat_num_clauses solver
-        when verbose $ hPutStrLn stderr 
-                     $ concat [ "CNF finished (" , "#variables: ", show numVars
-                                                 , ", #clauses: "  , show numClauses 
-                                                 , ")"]
-        when verbose $ hPutStrLn stderr $ "Starting solver"
-        startTime <- getCPUTime
-        b         <- API.solve solver []
-        endTime   <- getCPUTime
+        when verbose $ do
+          hPutStrLn stderr "CNF finished"
+          hPutStrLn stderr $ concat [ "#variables: ", show numVars
+                                    , ", #clauses: ", show numClauses ]
+          let showHistogram (length,num) = concat [ "#clauses of length "
+                                                  , show length, ":\t"
+                                                  , show num]
+          hPutStrLn stderr $ unlines 
+                           $ map showHistogram 
+                           $ M.toList $ clauseHistogram state'
+          hPutStrLn stderr $ "Starting solver"
+
+        startTime    <- getCPUTime
+        solverResult <- API.solve solver []
+        endTime      <- getCPUTime
 
         let diffTime = ( (fromIntegral (endTime - startTime)) / (10^12) ) :: Double
 
         when verbose $ hPutStrLn stderr $ concat 
           [ "Solver finished in "
-          , show diffTime, " seconds (result: " ++ show b ++ ")"
+          , show diffTime, " seconds (result: " ++ show solverResult ++ ")"
           ]
-        if b 
+        if solverResult
           then do
             when verbose $ hPutStrLn stderr $ "Starting decoder"    
-            out <- evalStateT (runSAT decoder) $ SATState solver 
+            out <- evalStateT (runSAT decoder) state'
             when verbose $ hPutStrLn stderr $ "Decoder finished"    
             return $ Just out
           else return Nothing
