@@ -23,7 +23,11 @@ import           Satchmo.Core.Formula (Formula, decodeFormula)
 
 data SATState = SATState { solver          :: ! API.Solver
                          , clauseHistogram :: ! (M.Map Int Int)
+                         , numLiterals     :: ! Integer
                          }
+
+emptyState :: API.Solver -> SATState
+emptyState solver = SATState solver M.empty 0
 
 newtype SAT a = SAT { runSAT :: StateT SATState IO a }
   deriving (Functor, Monad, MonadState SATState, MonadIO)
@@ -35,11 +39,14 @@ instance MonadSAT SAT where
     return $ literal True $ fromIntegral x
 
   emit clause = do
-    modify $! \state -> state { clauseHistogram = 
-      M.insertWith (+) (length $ literals clause) 1 $ clauseHistogram state }
+    modify $! \state -> state { 
+        clauseHistogram = M.insertWith (+) clauseLength 1 $ clauseHistogram state
+      , numLiterals     = fromIntegral clauseLength + numLiterals state
+      }
     s <- gets solver
     void $ liftIO $ API.addClause s apiClause
     where
+      clauseLength   = length $ literals clause
       apiClause      = map toApiLiteral $ literals clause
       toApiLiteral l = ( if isPositive l then id else API.neg ) 
                        $ API.MkLit
@@ -94,7 +101,7 @@ solve' :: Bool                -- ^Be verbosely
        -> SAT (Maybe (SAT a)) -- ^Action in the 'SAT' monad
        -> IO (Maybe a)        -- ^'Maybe' a result
 solve' verbose action = API.withNewSolver $ \ solver -> 
-  let state = SATState solver M.empty
+  let state = emptyState solver
   in do
     when verbose $ hPutStrLn stderr $ "Start producing CNF"
     runStateT (runSAT action) state >>= \(result,state') -> case result of
@@ -107,7 +114,9 @@ solve' verbose action = API.withNewSolver $ \ solver ->
         when verbose $ do
           hPutStrLn stderr "CNF finished"
           hPutStrLn stderr $ concat [ "#variables: ", show numVars
-                                    , ", #clauses: ", show numClauses ]
+                                    , ", #clauses: ", show numClauses
+                                    , ", #literals: ", show $ numLiterals state'
+                                    ]
           let showHistogram (length,num) = concat [ "#clauses of length "
                                                   , show length, ":\t"
                                                   , show num]
