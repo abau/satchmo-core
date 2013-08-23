@@ -27,7 +27,11 @@ import           Satchmo.Core.Formula (Formula, decodeFormula)
 
 data SATState = SATState { solver          :: ! API.Solver
                          , clauseHistogram :: ! (M.Map Int Int)
+                         , numLiterals     :: ! Integer
                          }
+
+emptyState :: API.Solver -> SATState
+emptyState solver = SATState solver M.empty 0
 
 newtype SAT a = SAT { runSAT :: StateT SATState IO a }
   deriving (Functor, Monad, MonadState SATState, MonadIO)
@@ -39,12 +43,15 @@ instance MonadSAT SAT where
     return $ literal True $ fromIntegral x
 
   emit clause = do
-    modify $! \state -> state { clauseHistogram = 
-      M.insertWith (+) (length $ literals clause) 1 $ clauseHistogram state }
+    modify $! \state -> state { 
+        clauseHistogram = M.insertWith (+) clauseLength 1 $ clauseHistogram state
+      , numLiterals     = fromIntegral clauseLength + numLiterals state
+      }
     s <- gets solver
     void $ liftIO $ API.addClause s apiClause
     where
-      apiClause = map toApiLiteral $ literals clause
+      clauseLength = length $ literals clause
+      apiClause    = map toApiLiteral $ literals clause
 
   note         = liftIO . log
   numVariables = gets solver >>= liftIO . API.minisat_num_vars
@@ -151,7 +158,7 @@ solveConfig :: [Config]            -- ^Configuration
             -> SAT (Maybe (SAT a)) -- ^'Maybe' an action in the 'SAT' monad
             -> IO (Maybe a)        -- ^'Maybe' a result
 solveConfig config action = API.withNewSolver $ \ solver ->
-  let state       = SATState solver M.empty
+  let state       = emptyState solver 
       assumptions = getAssumptions config
       verbose     = isVerbose config
   in do
@@ -167,7 +174,7 @@ solveConfig config action = API.withNewSolver $ \ solver ->
         log "CNF finished"
         when verbose $ do
           log "CNF finished"
-          showNumberOfVarsAndClauses solver
+          showNumbers state'
           let showHistogram (length,num) = concat [ "#clauses of length "
                                                   , show length, ":\t"
                                                   , show num]
@@ -201,8 +208,9 @@ checkAssumptions config = case getAssumptions config of
   Nothing -> return Nothing
   Just as -> do 
     solver <- gets solver
+    state  <- get
     liftIO $ do
-      when verbose $ showNumberOfVarsAndClauses solver
+      when verbose $ showNumbers state
 
       setPropagationBudget config solver
       setConflictBudget    config solver
@@ -228,12 +236,13 @@ checkAssumptions config = case getAssumptions config of
       then showResult startTime result >> return result
       else                                return result
 
-showNumberOfVarsAndClauses :: API.Solver -> IO ()
-showNumberOfVarsAndClauses solver = do
-  v <- API.minisat_num_vars solver
-  c <- API.minisat_num_clauses solver
+showNumbers :: SATState -> IO ()
+showNumbers state = do
+  v <- API.minisat_num_vars $ solver state
+  c <- API.minisat_num_clauses $ solver state
   log $ concat [ "#variables: "  , show v
                , ", #clauses: "  , show c 
+               , ", #literals: " , show $ numLiterals state
                ]
 
 log :: String -> IO ()
