@@ -27,7 +27,7 @@ data SATState = SATState { solver          :: ! API.Solver
                          }
 
 emptyState :: API.Solver -> SATState
-emptyState solver = SATState solver M.empty 0
+emptyState solver = SATState solver M.empty 1
 
 newtype SAT a = SAT { runSAT :: StateT SATState IO a }
   deriving (Functor, Monad, MonadState SATState, MonadIO)

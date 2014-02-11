@@ -31,12 +31,13 @@ instance MonadSAT SAT where
 
   note = liftIO . putStrLn
 
-  numVariables = liftM fromIntegral $ gets nextVariable
-  numClauses   = liftM fromIntegral $ gets nextClause
+  numVariables = liftM fromIntegral $ gets $ pred . nextVariable
+  numClauses   = liftM fromIntegral $ gets $ pred . nextClause
 
 -- |Prints reversed DIMACS formula on stdout
 onStdOut :: SAT a -> IO a
 onStdOut sat = do 
-  (result,state) <- runStateT (runSAT sat) (SATState 0 0)
-  putStrLn $ unwords ["p cnf", show $ nextVariable state, show $ nextClause state]
+  (result,state) <- runStateT (runSAT sat) (SATState 1 1)
+  putStrLn $ unwords ["p cnf", show $ pred $ nextVariable state
+                             , show $ pred $ nextClause state]
   return result
