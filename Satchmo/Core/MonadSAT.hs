@@ -2,7 +2,16 @@ module Satchmo.Core.MonadSAT
   (MonadSAT (..), traced)
 where
 
-import Satchmo.Core.Data (Literal,Clause)
+import qualified Control.Monad.Reader as Reader
+import qualified Control.Monad.Writer as Writer
+import qualified Control.Monad.Writer.Strict as WriterStrict
+import qualified Control.Monad.State as State
+import qualified Control.Monad.State.Strict as StateStrict
+import qualified Control.Monad.RWS as RWS
+import qualified Control.Monad.RWS.Strict as RWSStrict
+import           Control.Monad.Trans (lift)
+import           Data.Monoid (Monoid)
+import           Satchmo.Core.Data (Literal,Clause)
 
 class Monad m => MonadSAT m where
 
@@ -33,3 +42,52 @@ traced message action = do
   c2 <- numClauses
   note $ concat [message, " (delta variables: ", show (v2-v1), ", delta clauses: ", show (c2-c1), ")"]
   return result
+
+instance (MonadSAT m) => MonadSAT (Reader.ReaderT r m) where
+  fresh        = lift   fresh
+  emit         = lift . emit
+  note         = lift . note
+  numVariables = lift   numVariables
+  numClauses   = lift   numClauses
+
+instance (MonadSAT m, Monoid w) => MonadSAT (Writer.WriterT w m) where
+  fresh        = lift   fresh
+  emit         = lift . emit
+  note         = lift . note
+  numVariables = lift   numVariables
+  numClauses   = lift   numClauses
+
+instance (MonadSAT m, Monoid w) => MonadSAT (WriterStrict.WriterT w m) where
+  fresh        = lift   fresh
+  emit         = lift . emit
+  note         = lift . note
+  numVariables = lift   numVariables
+  numClauses   = lift   numClauses
+
+instance (MonadSAT m) => MonadSAT (State.StateT s m) where
+  fresh        = lift   fresh
+  emit         = lift . emit
+  note         = lift . note
+  numVariables = lift   numVariables
+  numClauses   = lift   numClauses
+
+instance (MonadSAT m) => MonadSAT (StateStrict.StateT s m) where
+  fresh        = lift   fresh
+  emit         = lift . emit
+  note         = lift . note
+  numVariables = lift   numVariables
+  numClauses   = lift   numClauses
+
+instance (MonadSAT m, Monoid w) => MonadSAT (RWS.RWST r w s m) where
+  fresh        = lift   fresh
+  emit         = lift . emit
+  note         = lift . note
+  numVariables = lift   numVariables
+  numClauses   = lift   numClauses
+
+instance (MonadSAT m, Monoid w) => MonadSAT (RWSStrict.RWST r w s m) where
+  fresh        = lift   fresh
+  emit         = lift . emit
+  note         = lift . note
+  numVariables = lift   numVariables
+  numClauses   = lift   numClauses
