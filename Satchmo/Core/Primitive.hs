@@ -38,9 +38,13 @@ class (Show p,Eq p) => Primitive p where
 
   -- |Encodes exclusive disjunction
   xor :: MonadSAT m => [p] -> m p
-  xor []     = return $ constant False
+  xor [] = return $ constant False
   xor xs = foldT return xor2 xor3 xs
     where
+      xor2 x y | evaluateConstant x == Just False = return y
+      xor2 x y | evaluateConstant x == Just True  = return $ not y
+      xor2 x y | evaluateConstant y == Just False = return x
+      xor2 x y | evaluateConstant y == Just True  = return $ not x
       xor2 x y = do
         r <- primitive
         assert [ not x,     y ,     r ]
@@ -48,6 +52,13 @@ class (Show p,Eq p) => Primitive p where
         assert [     x,     y , not r ]
         assert [ not x, not y , not r ]
         return r
+
+      xor3 a b c | evaluateConstant a == Just False =                 xor2 b c
+      xor3 a b c | evaluateConstant a == Just True  = return not `ap` xor2 b c
+      xor3 a b c | evaluateConstant b == Just False =                 xor2 a c
+      xor3 a b c | evaluateConstant b == Just True  = return not `ap` xor2 a c
+      xor3 a b c | evaluateConstant c == Just False =                 xor2 a b
+      xor3 a b c | evaluateConstant c == Just True  = return not `ap` xor2 a b
       xor3 a b c = do
         x <- primitive
         let implies xs ys = assert $ map not xs ++ ys
