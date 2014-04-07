@@ -106,7 +106,8 @@ solve' :: Bool                -- ^Be verbosely
        -> SAT (Maybe (SAT a)) -- ^Action in the 'SAT' monad
        -> IO (Maybe a)        -- ^'Maybe' a result
 solve' verbose action = API.withNewSolver $ \ solver -> 
-  let state = emptyState solver
+  let state       = emptyState solver
+      density c v = (fromIntegral c) / (fromIntegral v)
   in do
     when verbose $ hPutStrLn stderr $ "Start producing CNF"
     runStateT (runSAT action) state >>= \(result,state') -> case result of
@@ -121,9 +122,13 @@ solve' verbose action = API.withNewSolver $ \ solver ->
           hPutStrLn stderr $ concat [ "#variables: " , show $ numVariables' state'
                                     , ", #clauses: " , show $ numClauses'   state'
                                     , ", #literals: ", show $ numLiterals   state'
+                                    , ", clause density: ", show $ density (numClauses'   state')
+                                                                           (numVariables' state')
                                     ]
           hPutStrLn stderr $ concat [ "#variables (Minisat): ", show numMinisatVars
                                     , ", #clauses (Minisat): ", show numMinisatClauses
+                                    , ", clause density: ", show $ density numMinisatClauses
+                                                                           numMinisatVars
                                     ]
           let showHistogram (length,num) = concat [ "#clauses of length "
                                                   , show length, ":\t"
