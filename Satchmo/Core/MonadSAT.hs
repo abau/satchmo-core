@@ -40,7 +40,7 @@ traced message action = do
   result <- action
   v2 <- numVariables
   c2 <- numClauses
-  note $ concat [message, " (delta variables: ", show (v2-v1), ", delta clauses: ", show (c2-c1), ")"]
+  note $ concat [message, " #variables: ", show (v2-v1), ", #clauses: ", show (c2-c1)]
   return result
 
 instance (MonadSAT m) => MonadSAT (Reader.ReaderT r m) where
