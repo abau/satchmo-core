@@ -23,17 +23,21 @@ import           Satchmo.Core.Formula (Formula, decodeFormula)
 
 data SATState = SATState { solver          :: ! API.Solver
                          , clauseHistogram :: ! (M.Map Int Int)
-                         , numLiterals     :: ! Integer
+                         , numVariables'   :: ! Int
+                         , numClauses'     :: ! Int
+                         , numLiterals     :: ! Int
                          }
 
 emptyState :: API.Solver -> SATState
-emptyState solver = SATState solver M.empty 1
+emptyState solver = SATState solver M.empty 0 0 0
 
 newtype SAT a = SAT { runSAT :: StateT SATState IO a }
   deriving (Functor, Monad, MonadState SATState, MonadIO)
 
 instance MonadSAT SAT where
   fresh = do 
+    modify $! \state -> state { numVariables' = numVariables' state + 1 }
+
     s           <- gets solver
     API.MkLit x <- liftIO $ API.newLit s
     return $ literal True $ fromIntegral x
@@ -41,7 +45,8 @@ instance MonadSAT SAT where
   emit clause = do
     modify $! \state -> state { 
         clauseHistogram = M.insertWith (+) clauseLength 1 $ clauseHistogram state
-      , numLiterals     = fromIntegral clauseLength + numLiterals state
+      , numLiterals     = clauseLength + numLiterals state
+      , numClauses'     = numClauses' state + 1
       }
     s <- gets solver
     void $ liftIO $ API.addClause s apiClause
@@ -54,8 +59,8 @@ instance MonadSAT SAT where
                        $ variable l
 
   note         = liftIO . hPutStrLn stderr
-  numVariables = gets solver >>= liftIO . API.minisat_num_vars
-  numClauses   = gets solver >>= liftIO . API.minisat_num_clauses
+  numVariables = gets numVariables'
+  numClauses   = gets numClauses'
 
 instance Decode SAT Boolean Bool where
   decode b = case b of
@@ -109,13 +114,16 @@ solve' verbose action = API.withNewSolver $ \ solver ->
         when verbose $ hPutStrLn stderr "Abort due to known result"
         return Nothing
       Just decoder -> do
-        numVars    <- API.minisat_num_vars    solver
-        numClauses <- API.minisat_num_clauses solver
+        numMinisatVars    <- API.minisat_num_vars    solver
+        numMinisatClauses <- API.minisat_num_clauses solver
         when verbose $ do
           hPutStrLn stderr "CNF finished"
-          hPutStrLn stderr $ concat [ "#variables: ", show numVars
-                                    , ", #clauses: ", show numClauses
-                                    , ", #literals: ", show $ numLiterals state'
+          hPutStrLn stderr $ concat [ "#variables: " , show $ numVariables' state'
+                                    , ", #clauses: " , show $ numClauses'   state'
+                                    , ", #literals: ", show $ numLiterals   state'
+                                    ]
+          hPutStrLn stderr $ concat [ "#variables (Minisat): ", show numMinisatVars
+                                    , ", #clauses (Minisat): ", show numMinisatClauses
                                     ]
           let showHistogram (length,num) = concat [ "#clauses of length "
                                                   , show length, ":\t"
