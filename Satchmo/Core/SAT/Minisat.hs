@@ -7,7 +7,7 @@ module Satchmo.Core.SAT.Minisat
   (SAT, solve, solveWithTimeout, solve', module Satchmo.Core.MonadSAT)
 where
 
-import           Control.Monad.State
+import           Control.Monad.State.Strict
 import           System.IO (stderr,hPutStrLn)
 import           System.CPUTime (getCPUTime)
 import qualified Data.Map.Strict as M
