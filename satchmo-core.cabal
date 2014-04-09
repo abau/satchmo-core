@@ -1,16 +1,16 @@
 Name:           satchmo-core
-Version:        0.7.4
+Version:        0.7.5
 Cabal-version:  >= 1.9.2
 Build-type:     Simple
 
 Library
     Ghc-options:        -W -fno-warn-incomplete-patterns
     Extensions:           TypeFamilies
-    Build-Depends:        base >= 4.2 && < 5.0
-                        , containers == 0.5.*
-                        , array >= 0.4 && < 0.6
-                        , mtl == 2.1.*
-                        , transformers == 0.3.*
+    Build-Depends:        base
+                        , containers
+                        , array
+                        , mtl
+                        , transformers
                         , minisat
     Exposed-Modules:      Satchmo.Core
                         , Satchmo.Core.Boolean
