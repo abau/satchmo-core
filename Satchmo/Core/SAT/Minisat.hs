@@ -8,6 +8,7 @@ module Satchmo.Core.SAT.Minisat
 where
 
 import           Control.Monad.State.Strict
+import           Control.Applicative (Applicative)
 import           System.IO (stderr,hPutStrLn)
 import           System.CPUTime (getCPUTime)
 import qualified Data.Map.Strict as M
@@ -32,7 +33,7 @@ emptyState :: API.Solver -> SATState
 emptyState solver = SATState solver M.empty 0 0 0
 
 newtype SAT a = SAT { runSAT :: StateT SATState IO a }
-  deriving (Functor, Monad, MonadState SATState, MonadIO)
+  deriving (Functor, Applicative, Monad, MonadState SATState, MonadIO)
 
 instance MonadSAT SAT where
   fresh = do 

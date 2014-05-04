@@ -5,6 +5,7 @@ module Satchmo.Core.SAT.StdOut
 where
 
 import Control.Monad.State
+import Control.Applicative (Applicative)
 import Data.Word (Word)
 import Satchmo.Core.MonadSAT 
 import Satchmo.Core.Data (Literal (..),Clause (..),literal)
@@ -14,7 +15,7 @@ data SATState = SATState { nextVariable :: Word
                          }
 
 newtype SAT a = SAT { runSAT :: StateT SATState IO a }
-  deriving (Monad, MonadState SATState, MonadIO)
+  deriving (Functor, Applicative, Monad, MonadState SATState, MonadIO)
 
 instance MonadSAT SAT where
   fresh = do
