@@ -11,7 +11,7 @@ import           Control.Monad.State.Strict
 import           Control.Applicative (Applicative)
 import           System.IO (stderr,hPutStrLn)
 import           System.CPUTime (getCPUTime)
-import qualified Data.Map.Strict as M
+import qualified Data.IntMap.Strict as M
 import           Control.Concurrent.MVar (newEmptyMVar,putMVar,takeMVar)
 import           Control.Concurrent (killThread,forkIO,threadDelay)
 import           Control.Exception (AsyncException,catch)
@@ -23,7 +23,7 @@ import           Satchmo.Core.Boolean (Boolean (..))
 import           Satchmo.Core.Formula (Formula, decodeFormula)
 
 data SATState = SATState { solver          :: ! API.Solver
-                         , clauseHistogram :: ! (M.Map Int Int)
+                         , clauseHistogram :: ! (M.IntMap Int)
                          , numVariables'   :: ! Int
                          , numClauses'     :: ! Int
                          , numLiterals     :: ! Int
