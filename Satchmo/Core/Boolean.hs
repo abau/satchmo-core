@@ -27,7 +27,10 @@ instance Primitive Boolean where
   evaluateConstant (Boolean _)  = Nothing
   evaluateConstant (Constant b) = Just b
 
-  primitive = fresh >>= return . Boolean 
+  primitive i = fresh i >>= return . Boolean 
+
+  depth (Boolean  b) = D.depth b
+  depth (Constant _) = 0
 
   assert booleans = 
     let (constants,rest) = partition isConstant booleans
@@ -47,12 +50,12 @@ instance Primitive Boolean where
           constantValue    = P.and $ map value constants
       in case constantValue of
            False -> return $ constant False
-           True  -> do y <- boolean
+           True  -> do y <- boolean $ maximum $ map depth rest
                        sequence_ $ do x <- rest                      -- y -> rest
                                       return $ assertOr [not y, x]
                        assertOr $ y : map not rest                   -- y <- rest
                        return y
 
 -- |@boolean = primitive@ but with non-ambiguous type
-boolean :: MonadSAT m => m Boolean
+boolean :: MonadSAT m => Int -> m Boolean
 boolean = primitive

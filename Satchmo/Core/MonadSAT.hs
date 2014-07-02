@@ -15,8 +15,8 @@ import           Satchmo.Core.Data (Literal,Clause)
 
 class Monad m => MonadSAT m where
 
-  -- |Generates a fresh literal
-  fresh :: m Literal
+  -- |@fresh i@ generates a fresh literal at depth @i@
+  fresh :: Int -> m Literal
 
   -- |Emits a clause
   emit :: Clause -> m ()
@@ -44,49 +44,49 @@ traced message action = do
   return result
 
 instance (MonadSAT m) => MonadSAT (Reader.ReaderT r m) where
-  fresh        = lift   fresh
+  fresh        = lift . fresh
   emit         = lift . emit
   note         = lift . note
   numVariables = lift   numVariables
   numClauses   = lift   numClauses
 
 instance (MonadSAT m, Monoid w) => MonadSAT (Writer.WriterT w m) where
-  fresh        = lift   fresh
+  fresh        = lift . fresh
   emit         = lift . emit
   note         = lift . note
   numVariables = lift   numVariables
   numClauses   = lift   numClauses
 
 instance (MonadSAT m, Monoid w) => MonadSAT (WriterStrict.WriterT w m) where
-  fresh        = lift   fresh
+  fresh        = lift . fresh
   emit         = lift . emit
   note         = lift . note
   numVariables = lift   numVariables
   numClauses   = lift   numClauses
 
 instance (MonadSAT m) => MonadSAT (State.StateT s m) where
-  fresh        = lift   fresh
+  fresh        = lift . fresh
   emit         = lift . emit
   note         = lift . note
   numVariables = lift   numVariables
   numClauses   = lift   numClauses
 
 instance (MonadSAT m) => MonadSAT (StateStrict.StateT s m) where
-  fresh        = lift   fresh
+  fresh        = lift . fresh
   emit         = lift . emit
   note         = lift . note
   numVariables = lift   numVariables
   numClauses   = lift   numClauses
 
 instance (MonadSAT m, Monoid w) => MonadSAT (RWS.RWST r w s m) where
-  fresh        = lift   fresh
+  fresh        = lift . fresh
   emit         = lift . emit
   note         = lift . note
   numVariables = lift   numVariables
   numClauses   = lift   numClauses
 
 instance (MonadSAT m, Monoid w) => MonadSAT (RWSStrict.RWST r w s m) where
-  fresh        = lift   fresh
+  fresh        = lift . fresh
   emit         = lift . emit
   note         = lift . note
   numVariables = lift   numVariables

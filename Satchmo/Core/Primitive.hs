@@ -14,8 +14,11 @@ class (Show p,Eq p) => Primitive p where
   -- |@evaluateConstant p@ evaluates the value of @p@ if @p@ is constant
   evaluateConstant :: p -> Maybe Bool
 
-  -- |Makes a primitive whose value is unknown
-  primitive :: MonadSAT m => m p
+  -- |@primitive i@ makes a primitive of depth @i@ whose value is unknown
+  primitive :: MonadSAT m => Int -> m p
+
+  -- |Returns the depth of a primitive
+  depth :: p -> Int
 
   -- |Asserts a disjunction of primitives
   assert :: MonadSAT m => [p] -> m ()
@@ -46,7 +49,7 @@ class (Show p,Eq p) => Primitive p where
       xor2 x y | evaluateConstant y == Just False = return x
       xor2 x y | evaluateConstant y == Just True  = return $ not x
       xor2 x y = do
-        r <- primitive
+        r <- primitiveFrom [x,y]
         assert [ not x,     y ,     r ]
         assert [     x, not y ,     r ]
         assert [     x,     y , not r ]
@@ -60,7 +63,7 @@ class (Show p,Eq p) => Primitive p where
       xor3 a b c | evaluateConstant c == Just False =                 xor2 a b
       xor3 a b c | evaluateConstant c == Just True  = return not `ap` xor2 a b
       xor3 a b c = do
-        x <- primitive
+        x <- primitiveFrom [a,b,c]
         let implies xs ys = assert $ map not xs ++ ys
         implies [not a, not b, not c] [not x]
         implies [not a, not b,     c] [    x]
@@ -76,6 +79,9 @@ class (Show p,Eq p) => Primitive p where
   equals :: MonadSAT m => [p] -> m p
   equals xs = return not `ap` xor xs
 
+-- |@primitiveFrom ps@ makes a new primitive of depth @1 + (maximum $ map depth ps)@
+primitiveFrom :: (MonadSAT m, Primitive p) => [p] -> m p
+primitiveFrom ps = primitive $ 1 + (maximum $ map depth ps)
 
 foldB :: Monad m => (a -> m b) -> (b -> b -> m b) -> [a] -> m b
 foldB u f xs = case xs of
@@ -114,7 +120,7 @@ assertAnd = mapM_ $ assertOr . return
 -- |Encodes a conditional expression
 ifThenElse :: (MonadSAT m, Primitive p) => p -> p -> p -> m p
 ifThenElse i t e = do
-  r <- primitive
+  r <- primitiveFrom [i,t,e]
   assert [ not i, not t ,     r ]
   assert [ not i,     t , not r ]
   assert [     i, not e ,     r ]
@@ -142,7 +148,7 @@ antiSelect False p = p
 -- |Encodes a function by giving a full CNF that determines the outcome
 fun2 :: (MonadSAT m, Primitive p) => ( Bool -> Bool -> Bool ) -> p -> p -> m p
 fun2 f x y = do
-  r <- primitive
+  r <- primitiveFrom [x,y]
   sequence_ $ do
     a <- [ False, True ]
     b <- [ False, True ]
@@ -155,7 +161,7 @@ fun2 f x y = do
 fun3 :: (MonadSAT m, Primitive p) => ( Bool -> Bool -> Bool -> Bool ) 
                                   -> p -> p -> p -> m p
 fun3 f x y z = do
-  r <- primitive
+  r <- primitiveFrom [x,y,z]
   sequence_ $ do
     a <- [ False, True ]
     b <- [ False, True ]

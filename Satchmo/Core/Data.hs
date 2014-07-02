@@ -1,5 +1,5 @@
 module Satchmo.Core.Data
-  ( Variable, Literal, variable, isPositive, literal, not
+  ( Variable, Literal, variable, isPositive, depth, literal, not
   , Clause, clause, literals
   , CNF, cnf, clauses, numClauses, numVariables, toDimacs
   )
@@ -13,10 +13,11 @@ import qualified Data.Set as S
 type Variable = Word
 data Literal  = Literal { variable   :: Variable
                         , isPositive :: Bool
+                        , depth      :: Int
                         } deriving (Eq,Ord,Show)
 
-literal :: Bool -> Variable -> Literal
-literal pos var = Literal var pos
+literal :: Bool -> Variable -> Int -> Literal
+literal pos var depth = Literal var pos depth
 
 not :: Literal -> Literal
 not literal = 

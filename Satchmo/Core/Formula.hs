@@ -11,7 +11,7 @@ import           Data.Maybe (fromJust)
 import           Satchmo.Core.Boolean (Boolean (..))
 import           Satchmo.Core.MonadSAT (MonadSAT)
 import           Satchmo.Core.Primitive 
-import           Satchmo.Core.Data (Literal (..))
+import           Satchmo.Core.Data (variable,isPositive)
 import           Satchmo.Core.Decode (Decode,decode)
 
 data Formula = Atom     Boolean
@@ -51,7 +51,19 @@ instance Primitive Formula where
                 then Just $ foldl1 (==) $ map (fromJust . evaluateConstant) fs
                 else Nothing
 
-  primitive   = primitive >>= return . Atom  
+  primitive d = primitive d >>= return . Atom  
+
+  depth formula = case formula of
+    Atom    a    -> depth a
+    Not     f    -> depth f
+    And     fs   -> maxDepth fs
+    Or      fs   -> maxDepth fs
+    Implies a b  -> maxDepth [a,b]
+    Xor     fs   -> maxDepth fs
+    Equiv   fs   -> maxDepth fs
+    where
+      maxDepth fs = 1 + (maximum $ map depth fs)
+
   assert xs   = mapM toBoolean xs >>= assert
 
   not         =          Not
@@ -76,7 +88,7 @@ toBoolean formula = case formula of
   Equiv fs    -> mapM toBoolean fs >>= equals
 
 -- |@atom = primitive@ but with non-ambiguous type
-atom :: MonadSAT m => m Formula
+atom :: MonadSAT m => Int -> m Formula
 atom = primitive
 
 -- |Decodes a formula. Putting this into a @Decode@ instance would require

@@ -18,10 +18,10 @@ newtype SAT a = SAT { runSAT :: StateT SATState IO a }
   deriving (Functor, Applicative, Monad, MonadState SATState, MonadIO)
 
 instance MonadSAT SAT where
-  fresh = do
+  fresh depth = do
     i <- gets nextVariable
     modify ( \s -> s { nextVariable = nextVariable s + 1 } )
-    return $ literal True i
+    return $ literal True i depth
 
   emit clause = do
     modify ( \s -> s { nextClause = nextClause s + 1 } )

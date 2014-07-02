@@ -24,28 +24,32 @@ import           Satchmo.Core.Formula (Formula, decodeFormula)
 
 data SATState = SATState { solver          :: ! API.Solver
                          , clauseHistogram :: ! (M.Map Int Int)
+                         , depthHistogram  :: ! (M.Map Int Int)
                          , numVariables'   :: ! Int
                          , numClauses'     :: ! Int
                          , numLiterals     :: ! Int
                          }
 
 emptyState :: API.Solver -> SATState
-emptyState solver = SATState solver M.empty 0 0 0
+emptyState solver = SATState solver M.empty M.empty 0 0 0
 
 newtype SAT a = SAT { runSAT :: StateT SATState IO a }
   deriving (Functor, Applicative, Monad, MonadState SATState, MonadIO)
 
 instance MonadSAT SAT where
-  fresh = do 
+  fresh depth = do 
     modify $! \state -> state { numVariables' = numVariables' state + 1 }
 
     s           <- gets solver
     API.MkLit x <- liftIO $ API.newLit s
-    return $ literal True $ fromIntegral x
+    return $ literal True (fromIntegral x) depth
 
   emit clause = do
     modify $! \state -> state { 
         clauseHistogram = M.insertWith (+) clauseLength 1 $ clauseHistogram state
+      , depthHistogram  = foldr (\l -> M.insertWith (+) (depth l) 1)
+                                (depthHistogram state)
+                                (literals clause)
       , numLiterals     = clauseLength + numLiterals state
       , numClauses'     = numClauses' state + 1
       }
@@ -131,12 +135,16 @@ solve' verbose action = API.withNewSolver $ \ solver ->
                                     , ", clause density: ", show $ density numMinisatClauses
                                                                            numMinisatVars
                                     ]
-          let showHistogram (length,num) = concat [ "#clauses of length "
-                                                  , show length, ":\t"
-                                                  , show num]
+          let showHistogram msg (value,num) = concat [msg, show value, ":\t", show num]
+
           hPutStrLn stderr $ unlines 
-                           $ map showHistogram 
+                           $ map (showHistogram "#clauses of length ")
                            $ M.toList $ clauseHistogram state'
+
+          hPutStrLn stderr $ unlines 
+                           $ map (showHistogram "#literals of depth ")
+                           $ M.toList $ depthHistogram state'
+
           hPutStrLn stderr $ "Starting solver"
 
         startTime    <- getCPUTime
