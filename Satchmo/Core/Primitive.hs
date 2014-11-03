@@ -167,3 +167,14 @@ fun3 f x y z = do
         , select (f a b c) r 
         ]
   return r
+
+atmost :: (MonadSAT m, Primitive p) => Int -> [p] -> m p
+atmost k xs = case k of
+  0         -> return not `ap` or xs
+  _ | k < 0 -> error "Satchmo.Core.Primitive.atmost"
+  _         -> 
+    case xs of
+      []     -> return $ constant True
+      (y:ys) -> do restK       <- atmost k     ys >>= \b -> and [not y, b]
+                   restKMinus1 <- atmost (k-1) ys >>= \b -> and [    y, b]
+                   or [restK, restKMinus1]
