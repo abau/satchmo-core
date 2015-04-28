@@ -9,6 +9,7 @@ where
 
 import           Control.Monad.State.Strict
 import           Control.Applicative (Applicative)
+import           Control.Exception (bracket)
 import           System.IO (stderr,hPutStrLn)
 import           System.CPUTime (getCPUTime)
 import qualified Data.IntMap.Strict as M
@@ -106,7 +107,7 @@ solve action = solve' True $ SAT $ StateT $ \state -> do
 solve' :: Bool                -- ^Be verbosely
        -> SAT (Maybe (SAT a)) -- ^Action in the 'SAT' monad
        -> IO (Maybe a)        -- ^'Maybe' a result
-solve' verbose action = API.withNewSolver $ \ solver -> 
+solve' verbose action = withSolver $ \ solver -> 
   let state       = emptyState solver
       density c v = (fromIntegral c) / (fromIntegral v)
   in do
@@ -157,3 +158,5 @@ solve' verbose action = API.withNewSolver $ \ solver ->
             return $ Just out
           else return Nothing
 
+withSolver :: (API.Solver -> IO a) -> IO a
+withSolver = bracket API.minisat_new API.deleteSolver
